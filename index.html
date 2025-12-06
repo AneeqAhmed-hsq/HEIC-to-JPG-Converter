@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEIC to JPG Converter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Include libheif-js for HEIC support -->
+    <script src="https://unpkg.com/libheif-js@1.16.2/libheif.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background-color: #121212;
+            color: #f0f0f0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+            margin: 0 auto;
+            transition: background-color 0.3s;
+        }
+
+        .dark-mode .container {
+            background-color: #1e1e1e;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Header and title */
+        .tool-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .dark-mode .tool-header {
+            border-bottom-color: #333;
+        }
+
+        .tool-title {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ff6d00, #ff9100);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .dark-mode .tool-title {
+            background: linear-gradient(90deg, #ff8a50, #ffaa6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        .mode-toggle {
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            width: 50px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+            padding: 2px;
+            transition: background-color 0.3s;
+        }
+
+        .dark-mode .mode-toggle {
+            background-color: #333;
+        }
+
+        .toggle-circle {
+            width: 20px;
+            height: 20px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            left: 2px;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+
+        .dark-mode .toggle-circle {
+            transform: translateX(26px);
+            background-color: #ff8a50;
+        }
+
+        /* Instructions */
+        .instructions {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.5;
+            border-left: 4px solid #ff6d00;
+        }
+
+        .dark-mode .instructions {
+            background-color: #2a2a2a;
+            border-left-color: #ff8a50;
+        }
+
+        /* Compatibility notice */
+        .compatibility-notice {
+            background-color: #fff3e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            border-left: 4px solid #ff9800;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .dark-mode .compatibility-notice {
+            background-color: #33281a;
+            border-left-color: #ff9800;
+        }
+
+        .notice-icon {
+            font-size: 20px;
+            color: #ff9800;
+            margin-top: 2px;
+        }
+
+        .notice-content h4 {
+            margin-bottom: 6px;
+            color: #e65100;
+            font-weight: 600;
+        }
+
+        .dark-mode .notice-content h4 {
+            color: #ffab40;
+        }
+
+        .notice-content p {
+            color: #5d4037;
+            margin-bottom: 8px;
+        }
+
+        .dark-mode .notice-content p {
+            color: #ffcc80;
+        }
+
+        .browser-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .browser-tag {
+            background-color: #ffecb3;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #5d4037;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dark-mode .browser-tag {
+            background-color: #5d4037;
+            color: #ffecb3;
+        }
+
+        .browser-tag.supported {
+            background-color: #c8e6c9;
+            color: #1b5e20;
+        }
+
+        .dark-mode .browser-tag.supported {
+            background-color: #1b5e20;
+            color: #c8e6c9;
+        }
+
+        /* Main content layout */
+        .tool-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .tool-content {
+                flex-direction: row;
+            }
+        }
+
+        /* Input and output sections */
+        .input-section, .output-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: #ff6d00;
+        }
+
+        .dark-mode .section-title i {
+            color: #ff8a50;
+        }
+
+        /* File upload area */
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #fafafa;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .dark-mode .upload-area {
+            background-color: #2a2a2a;
+            border-color: #444;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #ff6d00;
+            background-color: rgba(255, 109, 0, 0.05);
+        }
+
+        .dark-mode .upload-area:hover, .dark-mode .upload-area.dragover {
+            border-color: #ff8a50;
+            background-color: rgba(255, 138, 80, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #ff6d00;
+            margin-bottom: 15px;
+        }
+
+        .dark-mode .upload-icon {
+            color: #ff8a50;
+        }
+
+        .upload-text {
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .upload-subtext {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .dark-mode .upload-subtext {
+            color: #aaa;
+        }
+
+        .upload-btn {
+            background-color: #ff6d00;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .upload-btn:hover {
+            background-color: #e65c00;
+            transform: translateY(-2px);
+        }
+
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+
+        .dark-mode .upload-btn {
+            background-color: #ff8a50;
+        }
+
+        .dark-mode .upload-btn:hover {
+            background-color: #ff7a40;
+        }
+
+        /* Image preview area */
+        .preview-area {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #fafafa;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .dark-mode .preview-area {
+            background-color: #2a2a2a;
+            border-color: #444;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .preview-placeholder {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .dark-mode .preview-placeholder {
+            color: #aaa;
+        }
+
+        /* File info */
+        .file-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 15px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+
+        .info-label {
+            color: #666;
+        }
+
+        .dark-mode .info-label {
+            color: #aaa;
+        }
+
+        .info-value {
+            font-weight: 500;
+        }
+
+        /* JPG options */
+        .jpg-options {
+            margin-top: 20px;
+            width: 100%;
+            display: none;
+        }
+
+        .jpg-options h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .dark-mode .jpg-options h3 {
+            color: #f0f0f0;
+        }
+
+        .option-group {
+            margin-bottom: 18px;
+        }
+
+        .option-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .option-value {
+            font-weight: 600;
+            color: #ff6d00;
+        }
+
+        .dark-mode .option-value {
+            color: #ff8a50;
+        }
+
+        .quality-slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e0e0e0;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .dark-mode .quality-slider {
+            background: #444;
+        }
+
+        .quality-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff6d00;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .dark-mode .quality-slider::-webkit-slider-thumb {
+            background: #ff8a50;
+        }
+
+        .quality-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff6d00;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .dark-mode .quality-slider::-moz-range-thumb {
+            background: #ff8a50;
+        }
+
+        /* Format buttons */
+        .format-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .format-btn {
+            flex: 1;
+            padding: 10px 15px;
+            background-color: #f0f0f0;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .dark-mode .format-btn {
+            background-color: #2a2a2a;
+            border-color: #444;
+            color: #f0f0f0;
+        }
+
+        .format-btn:hover {
+            border-color: #ff6d00;
+            transform: translateY(-2px);
+        }
+
+        .format-btn.active {
+            background-color: #ff6d00;
+            border-color: #ff6d00;
+            color: white;
+        }
+
+        .dark-mode .format-btn.active {
+            background-color: #ff8a50;
+            border-color: #ff8a50;
+        }
+
+        /* Checkbox style */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dark-mode .checkbox-custom {
+            border-color: #666;
+        }
+
+        .checkbox-custom.checked {
+            background-color: #ff6d00;
+            border-color: #ff6d00;
+        }
+
+        .dark-mode .checkbox-custom.checked {
+            background-color: #ff8a50;
+            border-color: #ff8a50;
+        }
+
+        .checkbox-custom.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        /* Compression comparison */
+        .compression-comparison {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 3px solid #ff6d00;
+            display: none;
+        }
+
+        .dark-mode .compression-comparison {
+            background-color: #2a2a2a;
+            border-left-color: #ff8a50;
+        }
+
+        .comparison-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .comparison-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .comparison-label {
+            color: #666;
+        }
+
+        .dark-mode .comparison-label {
+            color: #aaa;
+        }
+
+        .comparison-value {
+            font-weight: 500;
+        }
+
+        .savings {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .increase {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f0f0f0;
+            border-top: 3px solid #ff6d00;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        .dark-mode .loading-spinner {
+            border-color: #444;
+            border-top-color: #ff8a50;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .dark-mode .loading-text {
+            color: #aaa;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .control-btn {
+            padding: 10px 18px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .dark-mode .control-btn:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .convert-btn {
+            background-color: #ff6d00;
+            color: white;
+        }
+
+        .convert-btn:hover {
+            background-color: #e65c00;
+        }
+
+        .dark-mode .convert-btn {
+            background-color: #ff8a50;
+        }
+
+        .dark-mode .convert-btn:hover {
+            background-color: #ff7a40;
+        }
+
+        .download-btn {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .download-btn:hover {
+            background-color: #0da271;
+        }
+
+        .clear-btn {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .clear-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .dark-mode .clear-btn {
+            background-color: #333;
+            color: #f0f0f0;
+        }
+
+        .dark-mode .clear-btn:hover {
+            background-color: #444;
+        }
+
+        /* Conversion status */
+        .conversion-status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-warning {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: #ff9800;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        /* Footer */
+        .tool-footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eaeaea;
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .dark-mode .tool-footer {
+            border-top-color: #333;
+            color: #aaa;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .tool-title {
+                font-size: 24px;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .control-btn {
+                width: 100%;
+            }
+            
+            .format-buttons {
+                flex-direction: column;
+            }
+            
+            .jpg-options {
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tool-header">
+            <h1 class="tool-title">HEIC to JPG Converter</h1>
+            <button class="mode-toggle" id="modeToggle">
+                <div class="toggle-circle"></div>
+            </button>
+        </div>
+
+        <div class="instructions">
+            <p>Convert HEIC images (iPhone/Apple format) to widely compatible JPG format. All processing happens in your browser using advanced HEIC decoding technology. No data is uploaded to any server.</p>
+        </div>
+
+        <div class="compatibility-notice">
+            <div class="notice-icon">⚠️</div>
+            <div class="notice-content">
+                <h4>Browser Compatibility Notice</h4>
+                <p>HEIC conversion requires modern browser features. Best results with:</p>
+                <div class="browser-list">
+                    <div class="browser-tag supported">✅ Chrome 57+</div>
+                    <div class="browser-tag supported">✅ Edge 79+</div>
+                    <div class="browser-tag supported">✅ Firefox 52+</div>
+                    <div class="browser-tag">⚠️ Safari 11+</div>
+                </div>
+                <p style="margin-top: 8px; font-size: 12px;">If conversion fails, try updating your browser or using a different browser.</p>
+            </div>
+        </div>
+
+        <div class="tool-content">
+            <div class="input-section">
+                <h2 class="section-title">
+                    <i>📤</i> Input (HEIC/HEIF)
+                </h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📱</div>
+                    <p class="upload-text">Drop your HEIC files here</p>
+                    <p class="upload-subtext">HEIC, HEIF, .heic, .heif files from iPhone/Mac</p>
+                    <button class="upload-btn">Choose Files</button>
+                    <input type="file" id="fileInput" accept=".heic,.heif,.HEIC,.HEIF,image/heic,image/heif" multiple style="display: none;">
+                </div>
+
+                <div class="loading" id="loadingIndicator">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Decoding HEIC file...</div>
+                </div>
+
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <div class="info-row">
+                        <span class="info-label">File name:</span>
+                        <span class="info-value" id="fileName">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">File size:</span>
+                        <span class="info-value" id="fileSize">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dimensions:</span>
+                        <span class="info-value" id="fileDimensions">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Format:</span>
+                        <span class="info-value" id="fileFormat">HEIC</span>
+                    </div>
+                </div>
+
+                <div class="jpg-options" id="jpgOptions">
+                    <h3>JPG Conversion Settings</h3>
+                    
+                    <div class="option-group">
+                        <div class="option-label">
+                            <span>JPG Quality:</span>
+                            <span class="option-value" id="qualityValue">85%</span>
+                        </div>
+                        <input type="range" min="1" max="100" value="85" class="quality-slider" id="qualitySlider">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 5px;">
+                            <span>Smaller file</span>
+                            <span>Better quality</span>
+                        </div>
+                    </div>
+
+                    <div class="option-group">
+                        <div class="option-label">
+                            <span>Background Color:</span>
+                        </div>
+                        <div class="format-buttons">
+                            <button class="format-btn active" data-bg="white">White</button>
+                            <button class="format-btn" data-bg="black">Black</button>
+                            <button class="format-btn" data-bg="transparent">Keep Alpha</button>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <div class="checkbox-label" id="optimizeLabel">
+                            <div class="checkbox-custom checked" id="optimizeCheckbox"></div>
+                            <span>Optimize for web (smaller size)</span>
+                        </div>
+                    </div>
+
+                    <div class="compression-comparison" id="compressionComparison">
+                        <div class="comparison-title">Compression Comparison</div>
+                        <div class="comparison-row">
+                            <span class="comparison-label">Original HEIC:</span>
+                            <span class="comparison-value" id="originalSize">-</span>
+                        </div>
+                        <div class="comparison-row">
+                            <span class="comparison-label">Converted JPG:</span>
+                            <span class="comparison-value" id="convertedSize">-</span>
+                        </div>
+                        <div class="comparison-row">
+                            <span class="comparison-label">File size saving:</span>
+                            <span class="comparison-value" id="sizeSaving">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <h2 class="section-title">
+                    <i>📥</i> Output (JPG)
+                </h2>
+                <div class="preview-area" id="previewArea">
+                    <img class="preview-image" id="previewImage" src="" alt="Converted JPG preview">
+                    <p class="preview-placeholder" id="previewPlaceholder">Converted JPG will appear here</p>
+                </div>
+
+                <div class="conversion-status" id="conversionStatus"></div>
+
+                <div class="controls">
+                    <button class="control-btn convert-btn" id="convertBtn">
+                        <span>Convert to JPG</span>
+                    </button>
+                    <button class="control-btn download-btn" id="downloadBtn" disabled>
+                        <span>Download JPG</span>
+                    </button>
+                    <button class="control-btn clear-btn" id="clearBtn">
+                        <span>Clear All</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-footer">
+            <p>Professional HEIC to JPG Converter • Powered by libheif-js • All processing done client-side</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewArea = document.getElementById('previewArea');
+        const previewImage = document.getElementById('previewImage');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const fileDimensions = document.getElementById('fileDimensions');
+        const convertBtn = document.getElementById('convertBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const conversionStatus = document.getElementById('conversionStatus');
+        const modeToggle = document.getElementById('modeToggle');
+        const jpgOptions = document.getElementById('jpgOptions');
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityValue = document.getElementById('qualityValue');
+        const formatButtons = document.querySelectorAll('.format-btn[data-bg]');
+        const optimizeCheckbox = document.getElementById('optimizeCheckbox');
+        const optimizeLabel = document.getElementById('optimizeLabel');
+        const compressionComparison = document.getElementById('compressionComparison');
+        const originalSize = document.getElementById('originalSize');
+        const convertedSize = document.getElementById('convertedSize');
+        const sizeSaving = document.getElementById('sizeSaving');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        
+        // State variables
+        let originalImage = null;
+        let convertedImageUrl = null;
+        let originalFileName = '';
+        let originalFileSize = 0;
+        let jpgQuality = 0.85; // Default quality
+        let backgroundColor = 'white'; // 'white', 'black', or 'transparent'
+        let optimizeForWeb = true;
+        
+        // Initialize libheif
+        let heifLibLoaded = false;
+        
+        // Dark mode toggle
+        modeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode);
+        });
+        
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+        
+        // Quality slider update
+        qualitySlider.addEventListener('input', (e) => {
+            jpgQuality = e.target.value / 100;
+            qualityValue.textContent = `${e.target.value}%`;
+            
+            // If there's already a converted image, re-convert with new quality
+            if (convertedImageUrl && originalImage) {
+                convertToJpg();
+            }
+        });
+        
+        // Background color selection
+        formatButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                formatButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                backgroundColor = btn.dataset.bg;
+                
+                // If there's already a converted image, re-convert with new background
+                if (convertedImageUrl && originalImage) {
+                    convertToJpg();
+                }
+            });
+        });
+        
+        // Optimize toggle
+        optimizeCheckbox.addEventListener('click', () => {
+            optimizeForWeb = !optimizeForWeb;
+            optimizeCheckbox.classList.toggle('checked', optimizeForWeb);
+            
+            // If there's already a converted image, re-convert with new setting
+            if (convertedImageUrl && originalImage) {
+                convertToJpg();
+            }
+        });
+        
+        optimizeLabel.addEventListener('click', () => {
+            optimizeForWeb = !optimizeForWeb;
+            optimizeCheckbox.classList.toggle('checked', optimizeForWeb);
+            
+            // If there's already a converted image, re-convert with new setting
+            if (convertedImageUrl && originalImage) {
+                convertToJpg();
+            }
+        });
+        
+        // File upload area interactions
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFiles(e.target.files);
+            }
+        });
+        
+        // Handle selected files
+        async function handleFiles(files) {
+            // Only process the first file
+            const file = files[0];
+            
+            // Check if it's a HEIC/HEIF image
+            const isHeic = file.name.match(/\.(heic|heif|HEIC|HEIF)$/i) || 
+                          file.type === 'image/heic' || 
+                          file.type === 'image/heif';
+            
+            if (!isHeic) {
+                showStatus('Please select a HEIC/HEIF image file (.heic, .heif).', 'error');
+                return;
+            }
+            
+            originalFileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+            originalFileSize = file.size;
+            
+            // Show loading indicator
+            loadingIndicator.style.display = 'flex';
+            uploadArea.style.display = 'none';
+            
+            // Display file info
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'flex';
+            
+            try {
+                // Read the HEIC file
+                const arrayBuffer = await file.arrayBuffer();
+                
+                // Decode HEIC using libheif
+                const heifFile = {
+                    buffer: arrayBuffer,
+                    name: file.name,
+                    size: file.size
+                };
+                
+                // Decode HEIC image
+                const image = await decodeHeicImage(heifFile);
+                
+                // Store original image
+                originalImage = image;
+                
+                // Display dimensions
+                fileDimensions.textContent = `${image.width} × ${image.height}px`;
+                
+                // Reset conversion status
+                conversionStatus.style.display = 'none';
+                compressionComparison.style.display = 'none';
+                
+                // Enable convert button
+                convertBtn.disabled = false;
+                
+                // Reset download button
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<span>Download JPG</span>';
+                
+                // Show preview of original image
+                const previewCanvas = document.createElement('canvas');
+                previewCanvas.width = image.width;
+                previewCanvas.height = image.height;
+                const ctx = previewCanvas.getContext('2d');
+                ctx.putImageData(image, 0, 0);
+                
+                previewImage.src = previewCanvas.toDataURL('image/png');
+                previewImage.style.display = 'block';
+                previewPlaceholder.style.display = 'none';
+                
+                // Show JPG options
+                jpgOptions.style.display = 'block';
+                
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+                uploadArea.style.display = 'flex';
+                
+            } catch (error) {
+                console.error('HEIC decoding error:', error);
+                showStatus(`Error decoding HEIC file: ${error.message}. Try a different browser or update your current browser.`, 'error');
+                loadingIndicator.style.display = 'none';
+                uploadArea.style.display = 'flex';
+            }
+        }
+        
+        // Decode HEIC image using libheif
+        async function decodeHeicImage(heifFile) {
+            return new Promise((resolve, reject) => {
+                // Initialize libheif if not already loaded
+                if (!window.libheif) {
+                    reject(new Error('HEIC decoder library not loaded. Please refresh the page.'));
+                    return;
+                }
+                
+                const buffer = heifFile.buffer;
+                
+                // Create a decoder
+                const decoder = new window.libheif.HeifDecoder();
+                
+                try {
+                    // Decode the HEIC file
+                    const data = decoder.decode(buffer);
+                    
+                    if (!data || data.length === 0) {
+                        reject(new Error('No image data found in HEIC file'));
+                        return;
+                    }
+                    
+                    // Get the first image
+                    const image = data[0];
+                    
+                    // Get image dimensions
+                    const width = image.get_width();
+                    const height = image.get_height();
+                    
+                    // Create canvas for image data
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Get image data
+                    image.display(ctx, (displayData) => {
+                        if (!displayData) {
+                            reject(new Error('Failed to display HEIC image'));
+                            return;
+                        }
+                        
+                        // Get the image data from canvas
+                        const imageData = ctx.getImageData(0, 0, width, height);
+                        resolve({
+                            width,
+                            height,
+                            data: imageData
+                        });
+                    });
+                    
+                } catch (error) {
+                    reject(new Error(`Failed to decode HEIC: ${error.message}`));
+                }
+            });
+        }
+        
+        // Convert HEIC to JPG
+        function convertToJpg() {
+            if (!originalImage || !originalImage.data) return;
+            
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = originalImage.width;
+            canvas.height = originalImage.height;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Handle background color
+            if (backgroundColor === 'white') {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else if (backgroundColor === 'black') {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            // If backgroundColor is 'transparent', we keep the alpha channel
+            
+            // Draw the HEIC image data
+            ctx.putImageData(originalImage.data, 0, 0);
+            
+            // Convert to JPG data URL with specified quality
+            const quality = optimizeForWeb ? Math.max(0.7, jpgQuality) : jpgQuality;
+            convertedImageUrl = canvas.toDataURL('image/jpeg', quality);
+            
+            // Update preview with converted image
+            previewImage.src = convertedImageUrl;
+            
+            // Enable download button
+            downloadBtn.disabled = false;
+            
+            // Calculate and display compression comparison
+            updateCompressionComparison();
+        }
+        
+        // Update compression comparison
+        function updateCompressionComparison() {
+            if (!convertedImageUrl) return;
+            
+            // Calculate converted file size (approximate)
+            // JPG data URL is base64 encoded, so we need to estimate actual file size
+            const base64Length = convertedImageUrl.length - 'data:image/jpeg;base64,'.length;
+            const convertedFileSize = Math.ceil(base64Length * 3 / 4);
+            
+            // Update comparison display
+            originalSize.textContent = formatFileSize(originalFileSize);
+            convertedSize.textContent = formatFileSize(convertedFileSize);
+            
+            // Calculate savings
+            const savings = originalFileSize - convertedFileSize;
+            const savingsPercent = ((savings / originalFileSize) * 100).toFixed(1);
+            
+            if (savings > 0) {
+                sizeSaving.textContent = `${formatFileSize(savings)} (${savingsPercent}% smaller)`;
+                sizeSaving.className = 'comparison-value savings';
+            } else {
+                sizeSaving.textContent = `${formatFileSize(Math.abs(savings))} larger`;
+                sizeSaving.className = 'comparison-value increase';
+            }
+            
+            compressionComparison.style.display = 'block';
+        }
+        
+        // Convert button click handler
+        convertBtn.addEventListener('click', () => {
+            if (!originalImage) {
+                showStatus('Please upload a HEIC image first.', 'error');
+                return;
+            }
+            
+            // Show converting status
+            showStatus('Converting HEIC to JPG...', 'success');
+            
+            // Simulate conversion process
+            setTimeout(() => {
+                convertToJpg();
+                
+                // Show success status
+                const bgText = backgroundColor === 'transparent' ? 'with transparency' : `with ${backgroundColor} background`;
+                const optimizeText = optimizeForWeb ? ' (web optimized)' : '';
+                showStatus(`Conversion successful! ${Math.round(jpgQuality * 100)}% quality${optimizeText}, ${bgText}.`, 'success');
+            }, 600);
+        });
+        
+        // Download converted JPG
+        downloadBtn.addEventListener('click', () => {
+            if (!convertedImageUrl) {
+                showStatus('No converted image available.', 'error');
+                return;
+            }
+            
+            // Create a temporary link element
+            const link = document.createElement('a');
+            link.href = convertedImageUrl;
+            link.download = `${originalFileName || 'converted'}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Show download confirmation
+            showStatus('Download started!', 'success');
+            
+            // Change button text briefly
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<span>✓ Downloaded</span>';
+            
+            setTimeout(() => {
+                downloadBtn.innerHTML = originalText;
+            }, 2000);
+        });
+        
+        // Clear all
+        clearBtn.addEventListener('click', () => {
+            // Reset everything
+            originalImage = null;
+            convertedImageUrl = null;
+            originalFileName = '';
+            originalFileSize = 0;
+            jpgQuality = 0.85;
+            backgroundColor = 'white';
+            optimizeForWeb = true;
+            
+            // Reset UI
+            fileInput.value = '';
+            previewImage.src = '';
+            previewImage.style.display = 'none';
+            previewPlaceholder.style.display = 'block';
+            fileInfo.style.display = 'none';
+            jpgOptions.style.display = 'none';
+            conversionStatus.style.display = 'none';
+            compressionComparison.style.display = 'none';
+            loadingIndicator.style.display = 'none';
+            uploadArea.style.display = 'flex';
+            qualitySlider.value = 85;
+            qualityValue.textContent = '85%';
+            optimizeCheckbox.classList.add('checked');
+            
+            // Reset format buttons
+            formatButtons.forEach(btn => btn.classList.remove('active'));
+            formatButtons[0].classList.add('active');
+            
+            // Reset buttons
+            convertBtn.disabled = true;
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<span>Download JPG</span>';
+            
+            // Show cleared status briefly
+            showStatus('All cleared. Upload a new HEIC image.', 'success');
+            setTimeout(() => {
+                conversionStatus.style.display = 'none';
+            }, 3000);
+        });
+        
+        // Show status message
+        function showStatus(message, type) {
+            conversionStatus.textContent = message;
+            conversionStatus.className = 'conversion-status';
+            conversionStatus.classList.add(`status-${type}`);
+            conversionStatus.style.display = 'block';
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Check if libheif is loaded
+        function checkHeifSupport() {
+            if (typeof window.libheif === 'undefined') {
+                showStatus('HEIC decoder is loading...', 'warning');
+                // Try to load libheif dynamically
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/libheif-js@1.16.2/libheif.js';
+                script.onload = () => {
+                    showStatus('HEIC decoder loaded successfully!', 'success');
+                    setTimeout(() => {
+                        conversionStatus.style.display = 'none';
+                    }, 3000);
+                    heifLibLoaded = true;
+                };
+                script.onerror = () => {
+                    showStatus('Failed to load HEIC decoder. Please refresh the page.', 'error');
+                };
+                document.head.appendChild(script);
+            } else {
+                heifLibLoaded = true;
+            }
+        }
+        
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check HEIF support
+            checkHeifSupport();
+            
+            // Initialize with a disabled convert button
+            convertBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>
